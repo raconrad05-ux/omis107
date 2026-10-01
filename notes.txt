@@ -1,1 +1,4 @@
 here are some notes for this project
+Problem modification
+second line without staging
+lets mess things up for real
