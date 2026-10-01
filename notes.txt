@@ -3,3 +3,4 @@ Problem modification
 second line without staging
 lets mess things up for real
 Change 1
+change 2
