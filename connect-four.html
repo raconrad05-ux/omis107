@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect Four</title>
+  <style>
+    :root {
+      --bg: #ecfdf3;
+      --panel: #ffffff;
+      --text: #14532d;
+      --muted: #4d7c5f;
+      --line: #bbe5c8;
+      --board: #15803d;
+      --hole: #ecfdf3;
+      --red: #dc2626;
+      --yellow: #facc15;
+      --win: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    main {
+      background: var(--panel);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(20, 83, 45, 0.12);
+      text-align: center;
+      width: min(520px, calc(100vw - 32px));
+    }
+
+    h1 { margin: 0 0 1rem; }
+
+    .scoreboard {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .score {
+      flex: 1;
+      padding: 0.5rem;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background: var(--bg);
+      font-weight: 600;
+      transition: border-color 0.2s;
+    }
+
+    .score.active { border-color: var(--text); }
+
+    .dot {
+      display: inline-block;
+      width: 0.8em;
+      height: 0.8em;
+      border-radius: 50%;
+      vertical-align: -0.05em;
+    }
+    .dot.red { background: var(--red); }
+    .dot.yellow { background: var(--yellow); }
+
+    .status {
+      min-height: 1.5em;
+      font-size: 1.15rem;
+      margin: 0 0 1rem;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      padding: 8px;
+      background: var(--board);
+      border-radius: 12px;
+      margin-bottom: 1.25rem;
+    }
+
+    .column {
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 6px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .column:hover:not(:disabled) { background: rgba(255, 255, 255, 0.15); }
+    .column:disabled { cursor: default; }
+
+    .slot {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--hole);
+      transition: background 0.15s;
+    }
+    .slot.red { background: var(--red); }
+    .slot.yellow { background: var(--yellow); }
+    .slot.win { box-shadow: inset 0 0 0 4px var(--win), 0 0 0 2px var(--text); }
+
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .controls button {
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 2px solid var(--text);
+      background: var(--text);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .controls button.secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--line);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Connect Four</h1>
+
+    <div class="scoreboard">
+      <div class="score" id="score-red"><span class="dot red"></span> Red <span id="wins-red">0</span></div>
+      <div class="score" id="score-draw">Draws <span id="draws">0</span></div>
+      <div class="score" id="score-yellow"><span class="dot yellow"></span> Yellow <span id="wins-yellow">0</span></div>
+    </div>
+
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <div id="board" class="board" aria-label="Connect Four board"></div>
+
+    <div class="controls">
+      <button id="new-game" type="button">New game</button>
+      <button id="reset-scores" type="button" class="secondary">Reset scores</button>
+    </div>
+  </main>
+
+  <script>
+    const ROWS = 6;
+    const COLS = 7;
+    const NAMES = { red: "Red", yellow: "Yellow" };
+
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const scores = { red: 0, yellow: 0, draw: 0 };
+
+    let grid, current, gameOver, starter = "red";
+
+    // Build 7 column buttons, each holding 6 slots (top to bottom).
+    const columns = [];
+    for (let c = 0; c < COLS; c++) {
+      const col = document.createElement("button");
+      col.type = "button";
+      col.className = "column";
+      col.setAttribute("aria-label", `Column ${c + 1}`);
+      col.addEventListener("click", () => drop(c));
+      for (let r = 0; r < ROWS; r++) {
+        const slot = document.createElement("div");
+        slot.className = "slot";
+        col.appendChild(slot);
+      }
+      boardEl.appendChild(col);
+      columns.push(col);
+    }
+
+    function slotEl(r, c) {
+      return columns[c].children[r];
+    }
+
+    function newGame() {
+      grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+      current = starter;
+      starter = starter === "red" ? "yellow" : "red"; // alternate who starts
+      gameOver = false;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) slotEl(r, c).className = "slot";
+      }
+      columns.forEach(col => (col.disabled = false));
+      update();
+    }
+
+    function drop(c) {
+      if (gameOver) return;
+      let r = ROWS - 1;
+      while (r >= 0 && grid[r][c]) r--;
+      if (r < 0) return; // column full
+
+      grid[r][c] = current;
+      slotEl(r, c).classList.add(current);
+      if (r === 0) columns[c].disabled = true;
+
+      const line = findWin(r, c);
+      if (line) {
+        line.forEach(([wr, wc]) => slotEl(wr, wc).classList.add("win"));
+        scores[current]++;
+        endGame(`${NAMES[current]} wins!`);
+      } else if (grid[0].every(Boolean)) {
+        scores.draw++;
+        endGame("It's a draw.");
+      } else {
+        current = current === "red" ? "yellow" : "red";
+        update();
+      }
+    }
+
+    function findWin(r, c) {
+      const player = grid[r][c];
+      const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+      for (const [dr, dc] of directions) {
+        const line = [[r, c]];
+        for (const sign of [1, -1]) {
+          let nr = r + dr * sign, nc = c + dc * sign;
+          while (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && grid[nr][nc] === player) {
+            line.push([nr, nc]);
+            nr += dr * sign;
+            nc += dc * sign;
+          }
+        }
+        if (line.length >= 4) return line;
+      }
+      return null;
+    }
+
+    function endGame(message) {
+      gameOver = true;
+      columns.forEach(col => (col.disabled = true));
+      statusEl.textContent = message;
+      updateScores();
+      document.getElementById("score-red").classList.remove("active");
+      document.getElementById("score-yellow").classList.remove("active");
+    }
+
+    function update() {
+      statusEl.textContent = `${NAMES[current]}'s turn`;
+      document.getElementById("score-red").classList.toggle("active", current === "red");
+      document.getElementById("score-yellow").classList.toggle("active", current === "yellow");
+      updateScores();
+    }
+
+    function updateScores() {
+      document.getElementById("wins-red").textContent = scores.red;
+      document.getElementById("wins-yellow").textContent = scores.yellow;
+      document.getElementById("draws").textContent = scores.draw;
+    }
+
+    document.getElementById("new-game").addEventListener("click", newGame);
+    document.getElementById("reset-scores").addEventListener("click", () => {
+      scores.red = scores.yellow = scores.draw = 0;
+      updateScores();
+    });
+
+    newGame();
+  </script>
+</body>
+</html>
