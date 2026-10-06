@@ -1,12 +1,12 @@
 :root {
-  --bg: #f4f5f7;
+  --bg: #ecfdf3;
   --panel: #ffffff;
-  --text: #1f2933;
-  --muted: #6b7280;
-  --line: #d1d5db;
-  --x: #2563eb;
-  --o: #dc2626;
-  --win: #fef3c7;
+  --text: #14532d;
+  --muted: #4d7c5f;
+  --line: #bbe5c8;
+  --x: #15803d;
+  --o: #0e7490;
+  --win: #bbf7d0;
 }
 
 * { box-sizing: border-box; }
@@ -26,7 +26,7 @@ main {
   background: var(--panel);
   padding: 2rem;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(20, 83, 45, 0.12);
   text-align: center;
   width: min(420px, calc(100vw - 32px));
 }
@@ -85,7 +85,7 @@ h1 { margin: 0 0 1rem; }
 .cell:disabled { cursor: default; }
 .cell.x { color: var(--x); }
 .cell.o { color: var(--o); }
-.cell.win { background: var(--win); border-color: #f59e0b; }
+.cell.win { background: var(--win); border-color: #22c55e; }
 
 .controls {
   display: flex;
